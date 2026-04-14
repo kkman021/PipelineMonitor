@@ -17,16 +17,12 @@ jobs:
         include:
           - rid: win-x64
             os: windows-latest
-            artifact: azmon.exe
           - rid: linux-x64
             os: ubuntu-latest
-            artifact: azmon
           - rid: osx-x64
             os: macos-latest
-            artifact: azmon
           - rid: osx-arm64
             os: macos-latest
-            artifact: azmon
 
     steps:
       - name: Checkout
@@ -38,6 +34,7 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: Publish
+        shell: bash
         run: |
           dotnet publish src/AzureSummary.csproj \
             -c Release \
@@ -47,13 +44,15 @@ jobs:
             -p:WarningLevel=0 \
             -o publish/${{ matrix.rid }}
 
-      - name: Rename artifact (non-Windows)
-        if: matrix.rid != 'win-x64'
-        run: mv publish/${{ matrix.rid }}/azmon publish/${{ matrix.rid }}/azmon-${{ matrix.rid }}
-
-      - name: Rename artifact (Windows)
-        if: matrix.rid == 'win-x64'
-        run: mv publish/${{ matrix.rid }}/azmon.exe publish/${{ matrix.rid }}/azmon-${{ matrix.rid }}.exe
+      - name: Rename artifact
+        shell: bash
+        run: |
+          src="publish/${{ matrix.rid }}/azmon"
+          if [ -f "${src}.exe" ]; then
+            mv "${src}.exe" "${src}-${{ matrix.rid }}.exe"
+          else
+            mv "${src}" "${src}-${{ matrix.rid }}"
+          fi
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
