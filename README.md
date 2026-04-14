@@ -1,8 +1,6 @@
 # azmon — Azure DevOps Pipeline Monitor
 
-A terminal dashboard for monitoring multiple Azure DevOps Pipeline build statuses in real time. Optimized polling groups pipelines by organization/project to minimize API requests.
-
-## Interface
+A terminal dashboard for monitoring multiple Azure DevOps Pipeline build statuses in real time.
 
 ```
 ╭───────────────┬────────┬────────┬─────────┬─────────┬───────────┬──────────┬───────────╮
@@ -16,214 +14,123 @@ A terminal dashboard for monitoring multiple Azure DevOps Pipeline build statuse
     Press [Ctrl+R] to refresh now | [Ctrl+C] to exit | Next refresh in: 291s
 ```
 
-- **Build** column is a clickable hyperlink (opens in browser) in supported terminals
-- **Stages** column shows `current/total StageName` when a pipeline is running, and requires YAML-based pipelines (Classic pipelines show `-`)
-- Pressing `Ctrl+R` or `F5` forces an immediate refresh without waiting for the polling interval
-- `watch` launches in an alternate screen buffer — exiting restores your previous terminal content
+## Quick Start
+
+**1. Download** the binary for your platform from the [Releases](https://github.com/kkman021/PipelineMonitor/releases) page and rename it to `azmon` (see [Installation](#installation)).
+
+**2. Get a PAT** — in Azure DevOps, go to profile → **Personal access tokens** → New Token → Scopes: **Build → Read** only. ([Detailed steps](#azure-devops-pat-setup))
+
+**3. Configure and run:**
+
+```bash
+azmon config --pat <your-token>
+
+azmon add <organization> <project> <definitionId> -n "My Pipeline"
+
+azmon watch
+```
+
+---
 
 ## Installation
 
-Download the pre-built binary for your platform from the [Releases](https://github.com/kkman021/PipelineMonitor/releases) page:
+Download from the [Releases](https://github.com/kkman021/PipelineMonitor/releases) page:
 
-| Platform        | File                     |
-|-----------------|--------------------------|
-| Windows x64     | `azmon-win-x64.exe`      |
-| Linux x64       | `azmon-linux-x64`        |
-| macOS x64       | `azmon-osx-x64`          |
-| macOS ARM64     | `azmon-osx-arm64`        |
+| Platform      | File                |
+|---------------|---------------------|
+| Windows x64   | `azmon-win-x64.exe` |
+| Linux x64     | `azmon-linux-x64`   |
+| macOS x64     | `azmon-osx-x64`     |
+| macOS ARM64   | `azmon-osx-arm64`   |
 
-**Windows:** rename the file and add it to a directory on your `PATH` so it can be invoked as `azmon`:
+**Windows** — rename and add to PATH:
 
 ```powershell
-# Rename
 Rename-Item azmon-win-x64.exe azmon.exe
-
-# Move to a directory on PATH (e.g. C:\tools — create it first if needed)
 Move-Item azmon.exe C:\tools\azmon.exe
 
-# Add C:\tools to your user PATH (one-time, run in PowerShell as normal user)
-[Environment]::SetEnvironmentVariable(
-    "PATH",
-    $env:PATH + ";C:\tools",
-    [EnvironmentVariableTarget]::User
-)
+# Add C:\tools to user PATH (one-time)
+[Environment]::SetEnvironmentVariable("PATH", $env:PATH + ";C:\tools", [EnvironmentVariableTarget]::User)
 ```
 
 Restart your terminal after updating PATH.
 
-**Linux / macOS:** make the binary executable and move it to your `PATH`:
+**Linux / macOS:**
 
 ```bash
 chmod +x azmon-linux-x64
 mv azmon-linux-x64 /usr/local/bin/azmon
 ```
 
-### Build from source
+---
 
-Requires [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
+## Commands
 
-```bash
-git clone https://github.com/kkman021/PipelineMonitor.git
-cd PipelineMonitor
-dotnet publish src/AzureSummary.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o publish/
-```
-
-Replace `win-x64` with your target platform: `linux-x64`, `osx-x64`, `osx-arm64`.
-
-## Supported Terminals
-
-All terminals support basic functionality. Clickable links in the **Build** column require OSC 8 hyperlink support:
-
-| Terminal           | Clickable Links | Alternate Screen |
-|--------------------|:-:|:-:|
-| Windows Terminal   | Yes | Yes |
-| iTerm2 (macOS)     | Yes | Yes |
-| GNOME Terminal     | Yes | Yes |
-| Alacritty          | Yes | Yes |
-| cmd.exe            | No  | No  |
-| PowerShell ISE     | No  | No  |
-
-## Supported Operating Systems
-
-| OS                  | Architecture     |
-|---------------------|------------------|
-| Windows 10 / 11    | x64              |
-| Windows Server 2019+ | x64            |
-| Ubuntu 20.04+       | x64              |
-| Debian 11+          | x64              |
-| macOS 12+           | x64, ARM64       |
-
-## Azure DevOps PAT Setup
-
-### Required permissions
-
-Create a PAT with the minimum required scope:
-
-| Scope   | Permission |
-|---------|------------|
-| Build   | Read       |
-
-All other scopes can be left unchecked.
-
-### Steps to create a PAT
-
-1. Sign in to your Azure DevOps organization: `https://dev.azure.com/<your-organization>`
-2. Click your profile picture (top-right) → **Personal access tokens**
-3. Click **New Token**
-4. Fill in:
-   - **Name**: anything descriptive (e.g., `azmon`)
-   - **Organization**: select the target organization
-   - **Expiration**: set an appropriate duration
-   - **Scopes**: choose **Custom defined**, then check **Build → Read**
-5. Click **Create** and copy the token immediately (it is only shown once)
-
-> **Multi-organization:** Azure DevOps PATs are scoped to a single organization. If you monitor pipelines across multiple organizations, create a separate PAT per organization and use `--pat` when adding pipelines from other organizations.
-
-### Configure the PAT
-
-```bash
-# Set global PAT (used for all pipelines unless overridden)
-azmon config --pat <your-token>
-
-# Set a pipeline-specific PAT (overrides global for that pipeline only)
-azmon add <org> <project> <definitionId> --pat <other-token>
-```
-
-## Usage
-
-### Quick start
-
-```bash
-# 1. Set PAT
-azmon config --pat <your-token>
-
-# 2. Add pipelines to monitor
-azmon add my-org my-project 42 -n "Backend CI"
-azmon add my-org my-project 44 -n "Backend CD"
-
-# 3. Start the dashboard
-azmon watch
-```
-
-### All commands
-
-#### `azmon config`
-
-Configure global settings. Changes are persisted to `~/.azuremonitor/config.json`.
+### `azmon config`
 
 ```bash
 azmon config --pat <token>         # Set global PAT
-azmon config --interval <seconds>  # Set default polling interval (minimum: 10)
+azmon config --interval <seconds>  # Set polling interval (minimum: 10, default: 300)
 ```
 
-#### `azmon add`
-
-Add a pipeline to monitor.
+### `azmon add`
 
 ```bash
 azmon add <organization> <project> <definitionId> [options]
 
 Options:
-  -n, --name <name>   Custom display name shown in the dashboard
-  --pat <token>       Pipeline-specific PAT (overrides global PAT for this entry)
+  -n, --name <name>   Custom display name
+  --pat <token>       Pipeline-specific PAT (overrides global)
 ```
 
-The `<definitionId>` is the integer ID of the pipeline definition. Find it in the Azure DevOps URL when viewing a pipeline: `.../_build?definitionId=42`.
+The `<definitionId>` is the integer in the Azure DevOps pipeline URL: `.../_build?definitionId=42`.
 
-#### `azmon remove`
-
-Remove a monitored pipeline.
+### `azmon remove`
 
 ```bash
-azmon remove --id <guid>                                        # By local ID (from list)
-azmon remove --org <org> --project <project> --definition <id>  # By coordinates
+azmon remove --id <guid>                                         # from azmon list
+azmon remove --org <org> --project <project> --definition <id>
 ```
 
-#### `azmon list`
+### `azmon list`
 
-List all configured pipelines with their IDs, display names, and PAT source.
+List all configured pipelines with their IDs and PAT source.
+
+### `azmon columns`
 
 ```bash
-azmon list
+azmon columns                                   # show visibility status
+azmon columns --show Organization,Project       # show hidden columns
+azmon columns --hide TriggeredBy                # hide a column
+azmon columns --reset                           # restore defaults
 ```
 
-#### `azmon columns`
+Available: `Pipeline` `Organization` `Project` `Build` `Branch` `Status` `Stages` `Result` `Duration` `TriggeredBy` `LastPoll`
 
-Show or configure which columns are visible in the dashboard.
+Default visible: `Pipeline` `Build` `Branch` `Status` `Stages` `Result` `Duration` `LastPoll`
+
+### `azmon watch`
 
 ```bash
-azmon columns                          # Show current visibility status
-azmon columns --show Organization,Project,TriggeredBy
-azmon columns --hide TriggeredBy
-azmon columns --reset                  # Reset to defaults
+azmon watch               # use configured interval
+azmon watch -i <seconds>  # override interval for this session only
 ```
 
-Available columns: `Pipeline`, `Organization`, `Project`, `Build`, `Branch`, `Status`, `Stages`, `Result`, `Duration`, `TriggeredBy`, `LastPoll`
+| Key      | Action                  |
+|----------|-------------------------|
+| `Ctrl+R` | Force immediate refresh |
+| `F5`     | Force immediate refresh |
+| `Ctrl+C` | Exit                    |
 
-Default visible: `Pipeline`, `Build`, `Branch`, `Status`, `Stages`, `Result`, `Duration`, `LastPoll`
+The dashboard runs in an alternate screen buffer — exiting restores your original terminal content.
 
-#### `azmon watch`
+---
 
-Start the live monitoring dashboard.
+## Configuration File
 
-```bash
-azmon watch                 # Use configured polling interval (default: 300s)
-azmon watch -i <seconds>    # Override interval for this session only
-```
+`~/.azuremonitor/config.json` (Windows: `C:\Users\<user>\.azuremonitor\config.json`)
 
-**Keyboard shortcuts while watching:**
-
-| Key        | Action              |
-|------------|---------------------|
-| `Ctrl+R`   | Force immediate refresh |
-| `F5`       | Force immediate refresh |
-| `Ctrl+C`   | Exit dashboard      |
-
-### Configuration file
-
-Settings are stored at `~/.azuremonitor/config.json` (Windows: `C:\Users\<user>\.azuremonitor\config.json`).
-
-The file is created automatically on first use. Example:
+Created automatically on first use. The **Build** column in the dashboard is a clickable hyperlink in [supported terminals](#supported-terminals).
 
 ```json
 {
@@ -244,9 +151,61 @@ The file is created automatically on first use. Example:
 }
 ```
 
-## Polling behavior
+---
 
-- Pipelines sharing the same organization and project are batched into a single API request per poll cycle
-- When a pipeline is `Running`, one additional Timeline API call is made to retrieve stage progress
-- On HTTP 429 (rate limit), exponential backoff is applied per organization/project group: `5s → 10s → 20s → 40s → 80s → 160s → 300s`
-- The display refreshes every second (countdown timer); data is updated only on polling interval or manual refresh
+## Azure DevOps PAT Setup
+
+Required scope — **Build → Read** only. All other scopes can be left unchecked.
+
+1. Go to `https://dev.azure.com/<organization>`
+2. Profile picture (top-right) → **Personal access tokens** → **New Token**
+3. Scopes: **Custom defined** → check **Build → Read**
+4. Click **Create** and copy the token immediately (shown only once)
+
+> **Multi-organization:** PATs are scoped per organization. Use `--pat` when adding pipelines from a different org than your global PAT.
+
+---
+
+## Polling Behavior
+
+- Pipelines in the same organization/project are batched into one API request per poll cycle
+- When a pipeline is `Running`, one additional Timeline API call fetches stage progress
+- On HTTP 429, exponential backoff per org/project group: `5s → 10s → 20s → 40s → 80s → 160s → 300s`
+- Display refreshes every second (countdown); data updates only on poll or manual refresh
+
+---
+
+## Supported Terminals
+
+All terminals support basic functionality. Clickable links in the **Build** column require OSC 8:
+
+| Terminal         | Clickable Links | Alternate Screen |
+|------------------|:-:|:-:|
+| Windows Terminal | Yes | Yes |
+| iTerm2 (macOS)   | Yes | Yes |
+| GNOME Terminal   | Yes | Yes |
+| Alacritty        | Yes | Yes |
+| cmd.exe          | No  | No  |
+| PowerShell ISE   | No  | No  |
+
+## Supported Operating Systems
+
+| OS                   | Architecture |
+|----------------------|--------------|
+| Windows 10 / 11      | x64          |
+| Windows Server 2019+ | x64          |
+| Ubuntu 20.04+        | x64          |
+| Debian 11+           | x64          |
+| macOS 12+            | x64, ARM64   |
+
+## Build from Source
+
+Requires [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
+
+```bash
+git clone https://github.com/kkman021/PipelineMonitor.git
+cd PipelineMonitor
+dotnet publish src/AzureSummary.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o publish/
+```
+
+Replace `win-x64` with: `linux-x64`, `osx-x64`, `osx-arm64`.
