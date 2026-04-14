@@ -62,12 +62,22 @@ public class LiveTableRenderer(PollingEngine engine, IConfigurationService confi
             table.AddRow(empty);
         }
 
-        var nextRefresh = _engine.NextPollAt;
-        var countdown = nextRefresh.HasValue
-            ? $"{Math.Max(0, (int)(nextRefresh.Value - DateTime.UtcNow).TotalSeconds)}s"
-            : "...";
+        string caption;
+        if (_engine.IsQuietHoursActive)
+        {
+            var qh = config.QuietHours;
+            caption = $"[dim]Quiet hours active ({qh.Start:HH\\:mm}–{qh.End:HH\\:mm}) | Press [[Ctrl+R]] to refresh once | [[Ctrl+C]] to exit[/]";
+        }
+        else
+        {
+            var nextRefresh = _engine.NextPollAt;
+            var countdown = nextRefresh.HasValue
+                ? $"{Math.Max(0, (int)(nextRefresh.Value - DateTime.UtcNow).TotalSeconds)}s"
+                : "...";
+            caption = $"[dim]Press [[Ctrl+R]] to refresh now | [[Ctrl+C]] to exit | Next refresh in: {countdown}[/]";
+        }
 
-        table.Caption($"[dim]Press [[Ctrl+R]] to refresh now | [[Ctrl+C]] to exit | Next refresh in: {countdown}[/]");
+        table.Caption(caption);
 
         return table;
     }

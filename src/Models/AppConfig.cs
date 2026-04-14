@@ -16,4 +16,5 @@ public class AppConfig
         DashboardColumn.Duration,
         DashboardColumn.LastPoll
     ];
+    public QuietHoursConfig QuietHours { get; set; } = new();
 }

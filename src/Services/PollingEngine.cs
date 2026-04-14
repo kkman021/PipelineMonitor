@@ -25,6 +25,7 @@ public class PollingEngine
     public IReadOnlyDictionary<Guid, PipelineState> CurrentStates => _states;
 
     public DateTime? NextPollAt { get; private set; }
+    public bool IsQuietHoursActive { get; private set; }
 
     public PollingEngine(IAzureDevOpsService devOpsService, IConfigurationService configService)
     {
@@ -44,16 +45,33 @@ public class PollingEngine
 
         while (!ct.IsCancellationRequested)
         {
-            await PollAllGroupsAsync(ct);
-
-            NextPollAt = DateTime.UtcNow.AddSeconds(_intervalSeconds);
-
-            // Wait for interval or force refresh signal
             _forceRefreshTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-            await Task.WhenAny(
-                Task.Delay(TimeSpan.FromSeconds(_intervalSeconds), ct),
-                _forceRefreshTcs.Task
-            );
+
+            var config = _configService.Load();
+            IsQuietHoursActive = config.QuietHours.IsActive();
+
+            if (!IsQuietHoursActive)
+            {
+                await PollAllGroupsAsync(ct);
+                NextPollAt = DateTime.UtcNow.AddSeconds(_intervalSeconds);
+            }
+            else
+            {
+                NextPollAt = null;
+            }
+
+            // During quiet hours: wake up every minute to re-check, or on force refresh
+            var delay = IsQuietHoursActive
+                ? TimeSpan.FromMinutes(1)
+                : TimeSpan.FromSeconds(_intervalSeconds);
+
+            await Task.WhenAny(Task.Delay(delay, ct), _forceRefreshTcs.Task);
+
+            // Force refresh during quiet hours polls once immediately
+            if (_forceRefreshTcs.Task.IsCompleted && IsQuietHoursActive)
+            {
+                await PollAllGroupsAsync(ct);
+            }
         }
     }
 
