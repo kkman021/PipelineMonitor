@@ -32,12 +32,31 @@ Download the pre-built binary for your platform from the [Releases](https://gith
 | macOS x64       | `azmon-osx-x64`          |
 | macOS ARM64     | `azmon-osx-arm64`        |
 
-**Linux / macOS:** make the binary executable after download:
-```bash
-chmod +x azmon-linux-x64
+**Windows:** rename the file and add it to a directory on your `PATH` so it can be invoked as `azmon`:
+
+```powershell
+# Rename
+Rename-Item azmon-win-x64.exe azmon.exe
+
+# Move to a directory on PATH (e.g. C:\tools — create it first if needed)
+Move-Item azmon.exe C:\tools\azmon.exe
+
+# Add C:\tools to your user PATH (one-time, run in PowerShell as normal user)
+[Environment]::SetEnvironmentVariable(
+    "PATH",
+    $env:PATH + ";C:\tools",
+    [EnvironmentVariableTarget]::User
+)
 ```
 
-Optionally move it to a directory on your `PATH` (e.g., `/usr/local/bin/azmon`).
+Restart your terminal after updating PATH.
+
+**Linux / macOS:** make the binary executable and move it to your `PATH`:
+
+```bash
+chmod +x azmon-linux-x64
+mv azmon-linux-x64 /usr/local/bin/azmon
+```
 
 ### Build from source
 
