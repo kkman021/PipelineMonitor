@@ -69,9 +69,19 @@ mv azmon-linux-x64 /usr/local/bin/azmon
 ### `azmon config`
 
 ```bash
-azmon config --pat <token>         # Set global PAT
-azmon config --interval <seconds>  # Set polling interval (minimum: 10, default: 300)
+azmon config --pat <token>              # Set global PAT
+azmon config --interval <seconds>       # Set polling interval (minimum: 10, default: 300)
+
+# Quiet hours — suppress polling during off-hours
+azmon config --quiet on|off             # Enable or disable quiet hours
+azmon config --quiet-start HH:mm        # Set start time (24h, e.g. 18:00)
+azmon config --quiet-end HH:mm          # Set end time   (24h, e.g. 08:00)
+azmon config --quiet-zone <tz>          # Set timezone (IANA or Windows ID, default: Asia/Taipei)
 ```
+
+**Default quiet hours:** 18:00–08:00 Asia/Taipei (enabled by default).
+
+Quiet hours span midnight — during this period auto-polling is suspended. `Ctrl+R` still forces a single immediate poll. The dashboard caption shows `Quiet hours active (18:00–08:00)` instead of the countdown timer.
 
 ### `azmon add`
 
